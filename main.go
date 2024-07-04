@@ -1,42 +1,70 @@
 package main
 
 import (
-	"fmt"
-	"io"
+	"context"
+	"errors"
+	"log"
+	"net"
 	"net/http"
+	"os"
+	"os/signal"
 	"time"
 )
 
 func main() {
-	http.HandleFunc("/github-api", githubHandler)
-
-	http.ListenAndServe(":8080", nil)
+	if err := run(); err != nil {
+		log.Fatalln(err)
+	}
 }
 
-func githubHandler(w http.ResponseWriter, r *http.Request) {
-	req, err := http.NewRequest("GET", "https://api.github.com/", nil)
+func run() (err error) {
+	// Handle SIGINT (CTRL+C) gracefully.
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+
+	// Set up OpenTelemetry.
+	otelShutdown, err := setupOTelSDK(ctx)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	req.Header.Add("Accept", `application/json`)
+	// Handle shutdown properly so nothing leaks.
+	defer func() {
+		err = errors.Join(err, otelShutdown(context.Background()))
+	}()
 
-	client := http.Client{Timeout: time.Duration(1) * time.Second}
-	resp, err := client.Do(req)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+	// Start HTTP server.
+	srv := &http.Server{
+		Addr:         ":8080",
+		BaseContext:  func(_ net.Listener) context.Context { return ctx },
+		ReadTimeout:  time.Second,
+		WriteTimeout: 10 * time.Second,
+		Handler:      newHTTPHandler(),
 	}
-	defer resp.Body.Close()
+	srvErr := make(chan error, 1)
+	go func() {
+		srvErr <- srv.ListenAndServe()
+	}()
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	// Wait for interruption.
+	select {
+	case err = <-srvErr:
+		// Error when starting HTTP server.
 		return
+	case <-ctx.Done():
+		// Wait for first CTRL+C.
+		// Stop receiving signal notifications as soon as possible.
+		stop()
 	}
 
-	fmt.Printf("Body : %s \n ", body)
-	fmt.Printf("Response status : %s \n", resp.Status)
+	// When Shutdown is called, ListenAndServe immediately returns ErrServerClosed.
+	err = srv.Shutdown(context.Background())
+	return
+}
 
-	fmt.Fprint(w, "Github call ok\n")
+func newHTTPHandler() http.Handler {
+	mux := http.NewServeMux()
+
+	mux.Handle("/github-api", http.HandlerFunc(githubHandler))
+
+	return mux
 }
