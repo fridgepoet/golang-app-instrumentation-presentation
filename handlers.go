@@ -5,6 +5,8 @@ import (
 	"io"
 	"net/http"
 	"time"
+
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 func githubHandler(w http.ResponseWriter, r *http.Request) {
@@ -15,7 +17,11 @@ func githubHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	req.Header.Add("Accept", `application/json`)
 
-	client := http.Client{Timeout: time.Duration(1) * time.Second}
+	client := http.Client{
+		Timeout:   time.Duration(1) * time.Second,
+		Transport: otelhttp.NewTransport(http.DefaultTransport),
+	}
+
 	resp, err := client.Do(req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
