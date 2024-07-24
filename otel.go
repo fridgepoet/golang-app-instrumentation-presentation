@@ -3,12 +3,18 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
+	"sync"
 	"time"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 func setupOTelSDK(ctx context.Context) (shutdown func(context.Context) error, err error) {
@@ -27,10 +33,16 @@ func setupOTelSDK(ctx context.Context) (shutdown func(context.Context) error, er
 		err = errors.Join(inErr, shutdown(ctx))
 	}
 
+	conn, err := initConn()
+	if err != nil {
+		handleErr(err)
+		return
+	}
+
 	prop := newPropagator()
 	otel.SetTextMapPropagator(prop)
 
-	tracerProvider, err := newTraceProvider()
+	tracerProvider, err := newTraceProvider(ctx, conn)
 	if err != nil {
 		handleErr(err)
 		return
@@ -41,6 +53,22 @@ func setupOTelSDK(ctx context.Context) (shutdown func(context.Context) error, er
 	return
 }
 
+// Initialize a gRPC connection to be used by both the tracer and meter
+// providers.
+func initConn() (*grpc.ClientConn, error) {
+	// It connects the OpenTelemetry Collector through local gRPC connection.
+	// You may replace `localhost:4317` with your endpoint.
+	conn, err := grpc.NewClient("otel-collector:4317",
+		// Note the use of insecure transport here. TLS is recommended in production.
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create gRPC connection to collector: %w", err)
+	}
+
+	return conn, err
+}
+
 func newPropagator() propagation.TextMapPropagator {
 	return propagation.NewCompositeTextMapPropagator(
 		propagation.TraceContext{},
@@ -48,16 +76,47 @@ func newPropagator() propagation.TextMapPropagator {
 	)
 }
 
-func newTraceProvider() (*trace.TracerProvider, error) {
-	traceExporter, err := stdouttrace.New(
-		stdouttrace.WithPrettyPrint())
+func newTraceProvider(ctx context.Context, conn *grpc.ClientConn) (*trace.TracerProvider, error) {
+	//Set up a trace exporter
+	traceExporter, err := otlptracegrpc.New(ctx, otlptracegrpc.WithGRPCConn(conn))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create trace exporter: %w", err)
 	}
 
 	traceProvider := trace.NewTracerProvider(
-		trace.WithBatcher(traceExporter,
-			trace.WithBatchTimeout(time.Second)),
+		trace.WithBatcher(traceExporter, trace.WithBatchTimeout(1*time.Minute)),
+		trace.WithResource(initResource()),
 	)
 	return traceProvider, nil
+}
+
+var thisResource *resource.Resource
+var initResourcesOnce sync.Once
+
+func initResource() *resource.Resource {
+	initResourcesOnce.Do(func() {
+		extraResources, err := resource.New(
+			context.Background(),
+			resource.WithOS(),
+			resource.WithProcess(),
+			resource.WithContainer(),
+			resource.WithHost(),
+			resource.WithAttributes(
+				semconv.ServiceName("golang-app"),
+				semconv.ServiceVersion("0.0.1"),
+			),
+		)
+		if err != nil {
+			panic(err)
+		}
+
+		thisResource, err = resource.Merge(
+			resource.Default(),
+			extraResources,
+		)
+		if err != nil {
+			panic(err)
+		}
+	})
+	return thisResource
 }

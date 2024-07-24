@@ -10,7 +10,10 @@ import (
 )
 
 func githubHandler(w http.ResponseWriter, r *http.Request) {
-	req, err := http.NewRequest("GET", "https://api.github.com/", nil)
+	// Add sleep to make spans more distinct
+	time.Sleep(200 * time.Millisecond)
+
+	req, err := http.NewRequestWithContext(r.Context(), "GET", "https://api.github.com/", nil)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -29,13 +32,12 @@ func githubHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
+	_, err = io.ReadAll(resp.Body)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	fmt.Printf("Body : %s \n ", body)
 	fmt.Printf("Response status : %s \n", resp.Status)
 
 	fmt.Fprint(w, "Github call ok\n")
