@@ -11,6 +11,7 @@ receivers:
     # https://github.com/open-telemetry/opentelemetry-collector/tree/main/receiver/otlpreceiver
     protocols:
       grpc:
+        endpoint: 0.0.0.0:4317 # overrides default localhost, see breaking change https://github.com/open-telemetry/opentelemetry-collector-contrib/releases/tag/v0.104.0
       http:
   hostmetrics:
     # Optional. Host Metrics Receiver added as an example of Infra Monitoring capabilities of the OpenTelemetry Collector

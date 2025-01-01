@@ -38,7 +38,7 @@ func githubHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Printf("Response status : %s \n", resp.Status)
+	fmt.Printf("client.Do response status : %s \n", resp.Status)
 
-	fmt.Fprint(w, "Github call ok\n")
+	fmt.Fprint(w, "External call ok\n")
 }
