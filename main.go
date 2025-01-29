@@ -8,8 +8,6 @@ import (
 	"os"
 	"os/signal"
 	"time"
-
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 func main() {
@@ -55,8 +53,7 @@ func run() (err error) {
 func newHTTPHandler() http.Handler {
 	mux := http.NewServeMux()
 
-	mux.Handle("/github-api", otelhttp.WithRouteTag("/github-api", http.HandlerFunc(githubHandler)))
+	mux.Handle("/github-api", http.HandlerFunc(githubHandler))
 
-	handler := otelhttp.NewHandler(mux, "server.http")
-	return handler
+	return mux
 }
