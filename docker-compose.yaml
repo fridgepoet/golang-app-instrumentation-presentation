@@ -7,14 +7,6 @@ services:
     volumes:
       - ./:/app/
 
-  otel-collector:
-    image: otel/opentelemetry-collector-contrib:0.117.0
-    command: [ "--config=/etc/otelcol-contrib/config.yaml" ]
-    volumes:
-      - ./otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml
-    ports:
-      - "4317:4317" # OTLP gRPC receiver
-      - "55679:55679"
 
   autoinstrumenter:
     image: grafana/beyla:2.0.0
