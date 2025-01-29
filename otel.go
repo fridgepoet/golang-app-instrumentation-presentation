@@ -111,6 +111,7 @@ func newLoggerProvider(ctx context.Context, conn *grpc.ClientConn) (*log.LoggerP
 	log.NewLoggerProvider()
 	loggerProvider := log.NewLoggerProvider(
 		log.WithProcessor(log.NewBatchProcessor(logExporter)),
+		log.WithResource(initResource()),
 	)
 	return loggerProvider, nil
 }
