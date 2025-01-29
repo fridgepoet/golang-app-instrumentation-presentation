@@ -8,8 +8,11 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/sdk/log"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
@@ -49,6 +52,15 @@ func setupOTelSDK(ctx context.Context) (shutdown func(context.Context) error, er
 	}
 	shutdownFuncs = append(shutdownFuncs, tracerProvider.Shutdown)
 	otel.SetTracerProvider(tracerProvider)
+
+	// Set up logger provider.
+	loggerProvider, err := newLoggerProvider(ctx, conn)
+	if err != nil {
+		handleErr(err)
+		return
+	}
+	shutdownFuncs = append(shutdownFuncs, loggerProvider.Shutdown)
+	global.SetLoggerProvider(loggerProvider)
 
 	return
 }
@@ -90,6 +102,19 @@ func newTraceProvider(ctx context.Context, conn *grpc.ClientConn) (*trace.Tracer
 	return traceProvider, nil
 }
 
+func newLoggerProvider(ctx context.Context, conn *grpc.ClientConn) (*log.LoggerProvider, error) {
+	logExporter, err := otlploggrpc.New(ctx, otlploggrpc.WithGRPCConn(conn))
+	if err != nil {
+		return nil, err
+	}
+
+	log.NewLoggerProvider()
+	loggerProvider := log.NewLoggerProvider(
+		log.WithProcessor(log.NewBatchProcessor(logExporter)),
+	)
+	return loggerProvider, nil
+}
+
 var thisResource *resource.Resource
 var initResourcesOnce sync.Once
 
@@ -103,7 +128,6 @@ func initResource() *resource.Resource {
 			resource.WithHost(),
 			resource.WithAttributes(
 				semconv.ServiceName("golang-app"),
-				semconv.ServiceVersion("0.0.1"),
 			),
 		)
 		if err != nil {

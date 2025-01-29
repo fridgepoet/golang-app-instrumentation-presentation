@@ -13,5 +13,17 @@ services:
     volumes:
       - ./otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml
     ports:
-      - '4317:4317'
-      - '55679:55679'
+      - "4317:4317" # OTLP gRPC receiver
+      - "4318:4318"
+      - "55679:55679"
+
+  autoinstrumenter:
+    image: grafana/beyla:2.0.0
+    pid: "service:golang-app"
+    privileged: true
+    environment:
+      BEYLA_TRACE_PRINTER: text
+      BEYLA_OPEN_PORT: 8080
+      OTEL_EXPORTER_OTLP_ENDPOINT: "<your endpoint>"
+      GRAFANA_CLOUD_INSTANCE_ID: <your instance ID>
+      GRAFANA_CLOUD_API_KEY: "<your access token>"
