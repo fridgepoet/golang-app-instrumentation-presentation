@@ -5,5 +5,5 @@ Changes are live reloaded with https://github.com/air-verse/air.
 ## Make requests
 * `curl http://localhost:8080/github-api`
 
-## Trying out Beyla
+## Try out autoinstrumentation
 Check out the `beyla` branch.

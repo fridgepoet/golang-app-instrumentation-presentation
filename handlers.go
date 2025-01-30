@@ -66,5 +66,5 @@ func waitAround(context context.Context) {
 	defer span.End()
 
 	// Add sleep to make spans more distinct
-	time.Sleep(200 * time.Millisecond)
+	time.Sleep(50 * time.Millisecond)
 }
