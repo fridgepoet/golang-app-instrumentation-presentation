@@ -5,7 +5,7 @@ services:
       - "8080:8080"
 
   autoinstrumenter:
-    image: grafana/beyla:2.0.0
+    image: grafana/beyla:2.0.2
     pid: "service:golang-app"
     privileged: true
     environment:
