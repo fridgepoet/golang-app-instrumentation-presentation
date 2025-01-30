@@ -1,8 +1,12 @@
 services:
   golang-app:
-    build: .
+    image: cosmtrek/air
+    working_dir: /app
     ports:
-      - "8080:8080"
+      - 8080:8080
+    volumes:
+      - ./:/app/
+
 
   autoinstrumenter:
     image: grafana/beyla:2.0.2
