@@ -7,7 +7,6 @@ services:
     volumes:
       - ./:/app/
 
-
   autoinstrumenter:
     image: grafana/beyla:2.0.2
     pid: "service:golang-app"
