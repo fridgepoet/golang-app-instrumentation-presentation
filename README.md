@@ -6,7 +6,7 @@ Changes are live reloaded with https://github.com/air-verse/air.
 * `curl http://localhost:8080/github-api`
 
 ## Try out autoinstrumentation
-Check out the `beyla` branch.
+Check out the [`beyla` branch](https://github.com/fridgepoet/golang-app-instrumentation-presentation/tree/beyla).
 
 ## (Optional) Get Grafana Cloud access tokens, OTLP endpoint, etc
 
