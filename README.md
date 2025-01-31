@@ -1,13 +1,14 @@
 This branch contains the golang app and autoinstrumentation alone, based on https://grafana.com/docs/beyla/latest/setup/docker/.
 
-## Run app
+## Run app, generate activity, visualize
 1. `docker-compose up`
-
-## Make requests
-* `curl http://localhost:8080/github-api`
-
-## Try out autoinstrumentation
-Check out the [`beyla` branch](https://github.com/fridgepoet/golang-app-instrumentation-presentation/tree/beyla).
+2. `curl http://localhost:8080/github-api` a few times to create activity. You have a 1 in 2 chance of hitting a fake error
+3. If you're visualizing with Grafana Cloud, navigate to your instance. My favorite way to visualize data is:
+   1. left sidebar > Explore
+   2. I choose `grafanacloud-shirley-traces` as my datasource (Tempo is the database for trace storage)
+   3. Click on "Search" for the Query type, this lets me see any traces that have come in.
+   4. Clicking on a trace ID lets you visualize the spans and attributes.
+   5. Explore logs and metrics by switching the datasource. Or check out the curated exploration apps: left sidebar > Explore > below Explore, you'll see Metrics, Logs, Traces...
 
 ## (Optional) Get Grafana Cloud access tokens, OTLP endpoint, etc
 
