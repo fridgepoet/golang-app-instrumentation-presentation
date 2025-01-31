@@ -1,3 +1,5 @@
+This branch contains the golang app and autoinstrumentation alone, based on https://grafana.com/docs/beyla/latest/setup/docker/.
+
 ## Run app
 1. `docker-compose up`
 
