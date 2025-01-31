@@ -3,8 +3,8 @@ extensions:
   basicauth/grafana_cloud:
     # https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/extension/basicauthextension
     client_auth:
-      username: "<your username>"
-      password: "<your password>"
+      username: "<your Google Cloud instance ID>"
+      password: "<your Password / API Token>"
 
 receivers:
   otlp:
@@ -40,7 +40,7 @@ processors:
 exporters:
   otlphttp/grafana_cloud:
     # https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/otlpexporter
-    endpoint: "<your region's endpoint>"
+    endpoint: "<your OTLP endpoint>"
     auth:
       authenticator: basicauth/grafana_cloud
 
